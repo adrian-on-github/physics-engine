@@ -8,6 +8,20 @@ const Balls = [];
 let LEFT, UP, RIGHT, DOWN;
 let friction = 0.1;
 
+class Vector {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  add(v) {
+    return new Vector(this.x + v.x, this.y + v.y);
+  }
+  subtract(v) {
+    return new Vector(this.x - v.x, this.y - v.y);
+  }
+}
+
 class Ball {
   constructor(x, y, r) {
     this.x = x;
