@@ -64,7 +64,7 @@ class Ball {
     this.r = r;
     this.vel = new Vector(0, 0);
     this.acc = new Vector(0, 0);
-    this.acceleration = 0.3;
+    this.acceleration = 0.1;
     this.player = false;
     Balls.push(this);
   }
@@ -168,20 +168,31 @@ function coll_det_bb(b1, b2) {
   }
 }
 
+function pen_res_bb(b1, b2) {
+  let dist = b1.pos.subtr(b2.pos);
+  let pen_depth = b1.r + b2.r - dist.mag();
+  let pen_res = dist.unit().mult(pen_depth / 2);
+  b1.pos = b1.pos.add(pen_res);
+  b2.pos = b2.pos.add(pen_res.mult(-1));
+}
+
 function mainLoop() {
   ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
-  Balls.forEach((b) => {
+  Balls.forEach((b, index) => {
     b.drawBall();
     if (b.player) {
       keyControl(b);
     }
+    for (let i = index + 1; i < Balls.length; i++) {
+      if (coll_det_bb(Balls[index], Balls[i])) {
+        pen_res_bb(Balls[index], Balls[i]);
+      }
+    }
+
     b.display();
   });
 
-  if (coll_det_bb(Ball1, Ball2)) {
-    // ctx.fillText("Collision", 1400, 500);
-  }
   requestAnimationFrame(mainLoop);
 }
 
