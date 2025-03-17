@@ -59,13 +59,20 @@ class Vector {
 }
 
 class Ball {
-  constructor(x, y, r) {
+  constructor(x, y, r, m) {
     this.pos = new Vector(x, y);
     this.r = r;
+    this.m = m;
+    if (this.m === 0) {
+      this.inv_m = 0;
+    } else {
+      this.inv_m = 1 / this.m;
+    }
     this.vel = new Vector(0, 0);
     this.acc = new Vector(0, 0);
-    this.acceleration = 0.1;
+    this.acceleration = 0.5;
     this.player = false;
+    this.elasticity = 1;
     Balls.push(this);
   }
 
@@ -80,14 +87,17 @@ class Ball {
   }
 
   display() {
-    this.vel.drawVec(1450, 600, 10, "green");
-    this.acc.unit().drawVec(1450, 600, 50, "blue");
-    // this.acc.normal().drawVec(1450, 600, 50, "black");
-    ctx.beginPath();
-    ctx.arc(1450, 600, 50, 0, 2 * Math.PI);
-    ctx.strokeStyle = "black";
-    ctx.stroke();
-    ctx.closePath();
+    this.vel.drawVec(this.pos.x, this.pos.y, 10, "green");
+    ctx.fillStyle = "black";
+    ctx.fillText("m = " + this.m, this.pos.x - 10, this.pos.y + 5);
+    ctx.fillText("m = " + this.elasticity, this.pos.x - 10, this.pos.y + 5);
+  }
+
+  reposition() {
+    this.acc = this.acc.unit().mult(this.acceleration);
+    this.vel = this.vel.add(this.acc);
+    this.vel = this.vel.mult(1 - friction);
+    this.pos = this.pos.add(this.vel);
   }
 }
 
@@ -150,14 +160,10 @@ function keyControl(b) {
   if (!RIGHT && !LEFT) {
     b.acc.x = 0;
   }
+}
 
-  b.acc = b.acc.unit().mult(b.acceleration);
-  b.vel = b.vel.add(b.acc);
-  b.vel = b.vel.mult(1 - friction);
-  b.pos.x += b.vel.x;
-  b.pos.y += b.vel.y;
-
-  b.pos = b.pos.add(b.vel);
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function coll_det_bb(b1, b2) {
@@ -171,9 +177,28 @@ function coll_det_bb(b1, b2) {
 function pen_res_bb(b1, b2) {
   let dist = b1.pos.subtr(b2.pos);
   let pen_depth = b1.r + b2.r - dist.mag();
-  let pen_res = dist.unit().mult(pen_depth / 2);
-  b1.pos = b1.pos.add(pen_res);
-  b2.pos = b2.pos.add(pen_res.mult(-1));
+  let pen_res = dist.unit().mult(pen_depth / (b1.inv_m + b2.inv_m));
+  b1.pos = b1.pos.add(pen_res.mult(b1.inv_m));
+  b2.pos = b2.pos.add(pen_res.mult(-b2.inv_m));
+}
+
+function coll_res_bb(b1, b2) {
+  let normal = b1.pos.subtr(b2.pos).unit();
+  let relVel = b1.vel.subtr(b2.vel);
+  let sepVel = Vector.dot(relVel, normal);
+  let new_sepVel = -sepVel * Math.min(b1.elasticity, b2.elasticity);
+
+  let vsep_diff = new_sepVel - sepVel;
+  let impulse = vsep_diff / (b1.inv_m + b2.inv_m);
+  let impulseVec = normal.mult(impulse);
+
+  b1.vel = b1.vel.add(impulseVec.mult(b1.inv_m));
+  b2.vel = b2.vel.add(impulseVec.mult(-b2.inv_m));
+}
+
+function momentum_display() {
+  let momentum = Ball1.vel.add(Ball2.vel).mag();
+  ctx.fillText(`Momentum:` + `${momentum.toFixed(3)}`, 1400, 530);
 }
 
 function mainLoop() {
@@ -187,17 +212,30 @@ function mainLoop() {
     for (let i = index + 1; i < Balls.length; i++) {
       if (coll_det_bb(Balls[index], Balls[i])) {
         pen_res_bb(Balls[index], Balls[i]);
+        coll_res_bb(Balls[index], Balls[i]);
       }
     }
 
     b.display();
+    b.reposition();
   });
+  momentum_display();
 
   requestAnimationFrame(mainLoop);
 }
 
-let Ball1 = new Ball(200, 200, 30);
-let Ball2 = new Ball(300, 250, 40);
+for (let i = 0; i < 10; i++) {
+  let newBall = new Ball(
+    randInt(100, 1300),
+    randInt(50, 600),
+    randInt(20, 50),
+    randInt(0, 10)
+  );
+  newBall.elasticity = randInt(0, 10) / 10;
+}
+
+let Ball1 = new Ball(200, 200, 30, 2);
+let Ball2 = new Ball(300, 250, 40, 5);
 Ball1.player = true;
 
 requestAnimationFrame(mainLoop);
