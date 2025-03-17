@@ -14,6 +14,7 @@ class Vector {
     this.y = y;
   }
 
+  // v = Vector, n = Number
   add(v) {
     return new Vector(this.x + v.x, this.y + v.y);
   }
@@ -59,20 +60,19 @@ class Vector {
 
 class Ball {
   constructor(x, y, r) {
-    this.x = x;
-    this.y = y;
+    this.pos = new Vector(x, y);
     this.r = r;
     this.vel = new Vector(0, 0);
     this.acc = new Vector(0, 0);
-    this.acceleration = 1;
+    this.acceleration = 0.3;
     this.player = false;
     Balls.push(this);
   }
 
   drawBall() {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
-    ctx.strokeStyle = "red";
+    ctx.arc(this.pos.x, this.pos.y, this.r, 0, 2 * Math.PI);
+    ctx.strokeStyle = "black";
     ctx.stroke();
     ctx.fillStyle = "red";
     ctx.fill();
@@ -154,8 +154,18 @@ function keyControl(b) {
   b.acc = b.acc.unit().mult(b.acceleration);
   b.vel = b.vel.add(b.acc);
   b.vel = b.vel.mult(1 - friction);
-  b.x += b.vel.x;
-  b.y += b.vel.y;
+  b.pos.x += b.vel.x;
+  b.pos.y += b.vel.y;
+
+  b.pos = b.pos.add(b.vel);
+}
+
+function coll_det_bb(b1, b2) {
+  if (b1.r + b2.r >= b2.pos.subtr(b1.pos).mag()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 function mainLoop() {
@@ -168,10 +178,15 @@ function mainLoop() {
     }
     b.display();
   });
+
+  if (coll_det_bb(Ball1, Ball2)) {
+    // ctx.fillText("Collision", 1400, 500);
+  }
   requestAnimationFrame(mainLoop);
 }
 
-let Ball1 = new Ball(100, 100, 30);
+let Ball1 = new Ball(200, 200, 30);
+let Ball2 = new Ball(300, 250, 40);
 Ball1.player = true;
 
 requestAnimationFrame(mainLoop);
